@@ -1288,9 +1288,32 @@ async function finishAudit(){
 // ══════════════════════════════════════════
 // RED CARD FORM (durante auditoría)
 // ══════════════════════════════════════════
-function handleRCPhoto(e){
+function compressPhoto(file,maxW,maxH,quality){
+  return new Promise(resolve=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+        if(h>maxH){w=Math.round(w*maxH/h);h=maxH;}
+        const c=document.createElement('canvas');
+        c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(c.toDataURL('image/jpeg',quality));
+      };
+      img.src=ev.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+async function handleRCPhoto(e){
   const files=Array.from(e.target.files).slice(0,3-_rcPhotos.length);
-  files.forEach(f=>{const r=new FileReader();r.onload=ev=>{_rcPhotos.push(ev.target.result);renderRCThumbs();};r.readAsDataURL(f);});
+  for(const f of files){
+    const compressed=await compressPhoto(f,800,600,0.7);
+    _rcPhotos.push(compressed);
+  }
+  renderRCThumbs();
   e.target.value='';
 }
 function renderRCThumbs(){
