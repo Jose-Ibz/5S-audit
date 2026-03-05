@@ -369,7 +369,11 @@ svg.radar{width:100%;height:180px;}
         <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--accent);">Nueva Auditoría</div>
         <div style="font-size:13px;color:var(--text2);margin-top:4px;">Completa los datos antes de comenzar</div>
       </div>
-      <div class="fg"><label>Área / Zona *</label><input class="fi" id="aud-area" placeholder="Ej: Línea A, Almacén Norte..."></div>
+      <div class="fg"><label>Área / Zona *</label>
+        <select class="fi" id="aud-area">
+          <option value="">— Seleccionar área —</option>
+        </select>
+        </div>
       <div class="fg"><label>Auditor *</label><input class="fi" id="aud-auditor" placeholder="Nombre completo"></div>
       <div class="fg"><label>Fecha</label><input class="fi" type="date" id="aud-fecha"></div>
       <div class="fg"><label>Planta</label><input class="fi" id="aud-planta" placeholder="Nombre de la planta"></div>
@@ -548,6 +552,14 @@ svg.radar{width:100%;height:180px;}
       </div>
       <button class="btn btn-primary btn-block" onclick="saveConfig()">Guardar configuración</button>
       <div class="divider"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-weight:600;font-size:14px;">🏭 Áreas de trabajo</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddAreaSheet()">+ Añadir área</button>
+      </div>
+      <div class="card"><div class="card-body" style="padding:0 16px;" id="areas-list">
+        <div style="padding:12px;color:var(--text3);font-size:13px;">Sin áreas configuradas</div>
+      </div></div>
+      <div class="divider"></div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button class="btn btn-secondary btn-block" onclick="exportData()">⬇ Exportar JSON</button>
         <button class="btn btn-secondary btn-block" onclick="importData()">⬆ Importar JSON</button>
@@ -709,6 +721,24 @@ svg.radar{width:100%;height:180px;}
   </div>
 </div>
 
+
+
+<!-- SHEET: Añadir/Editar área -->
+<div class="overlay" id="area-sheet">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-hdr"><div class="sh-title" id="area-sheet-title">🏭 Nueva área</div><div class="sh-close" onclick="closeSheet('area-sheet')">✕</div></div>
+    <div class="sh-body">
+      <div class="fg"><label>Nombre del área *</label><input class="fi" type="text" id="area-nombre" placeholder="Ej: Oficina, Almacén, Bancos de mecánicos..."></div>
+      <div class="fg"><label>Descripción (opcional)</label><input class="fi" type="text" id="area-desc" placeholder="Descripción breve del área"></div>
+      <input type="hidden" id="area-edit-idx">
+    </div>
+    <div class="sh-foot">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeSheet('area-sheet')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" id="area-save-btn" onclick="saveArea()">Guardar área</button>
+    </div>
+  </div>
+</div>
 
 <!-- SHEET: Nuevo usuario -->
 <div class="overlay" id="newuser-sheet">
@@ -1131,7 +1161,7 @@ function go(id){
   const el=document.getElementById('page-'+id);if(el)el.classList.add('active');
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   const nb=document.getElementById('nb-'+id);if(nb)nb.classList.add('active');
-  const R={home:renderHome,history:renderHistory,plan:renderPlan,compare:renderCmpSel,charts:renderCharts,reports:renderReports,setup:initSetup,audit:renderAudit,redcards:renderRedCards,users:renderUsersPage};
+  const R={home:renderHome,history:renderHistory,plan:renderPlan,compare:renderCmpSel,charts:renderCharts,reports:renderReports,setup:()=>{initSetup();renderAreasList();},audit:renderAudit,redcards:renderRedCards,users:renderUsersPage};
   if(R[id])R[id]();
 }
 
@@ -2274,7 +2304,7 @@ function printPlan(){
 // CONFIG
 // ══════════════════════════════════════════
 async function saveConfig(){const cfg={empresa:document.getElementById('cfg-emp').value,responsable:document.getElementById('cfg-resp').value,min:document.getElementById('cfg-min').value,opt:document.getElementById('cfg-opt').value};DB.config=cfg;const res=await api('saveConfig',{config:cfg});if(res&&res.ok){toast('Configuración guardada en Drive ✓','✅');setSyncStatus('online');}else{toast('Guardado local','⚠️');setSyncStatus('offline');}}
-function loadConfig(){const c=DB.config;if(c.empresa)document.getElementById('cfg-emp').value=c.empresa;if(c.responsable)document.getElementById('cfg-resp').value=c.responsable;if(c.min)document.getElementById('cfg-min').value=c.min;if(c.opt)document.getElementById('cfg-opt').value=c.opt;}
+function loadConfig(){const c=DB.config;if(c.empresa)document.getElementById('cfg-emp').value=c.empresa;if(c.responsable)document.getElementById('cfg-resp').value=c.responsable;if(c.min)document.getElementById('cfg-min').value=c.min;if(c.opt)document.getElementById('cfg-opt').value=c.opt;renderAreasList();populateAreaSelects();}
 
 // ══════════════════════════════════════════
 // SHEETS / LIGHTBOX / TOAST
@@ -2336,6 +2366,111 @@ function loadDemo(){
   updateBadge();go('home');toast('Demo cargado ✓','🎯');
 }
 
+
+// ══════════════════════════════════════════
+// GESTIÓN DE ÁREAS
+// ══════════════════════════════════════════
+
+function getAreas(){
+  const cfg=DB.config;
+  try{ return JSON.parse(cfg.areas||'[]'); }catch(e){ return []; }
+}
+
+function saveAreas(areas){
+  const cfg=DB.config;
+  cfg.areas=JSON.stringify(areas);
+  DB.config=cfg;
+  api('saveConfig',{config:cfg});
+}
+
+function renderAreasList(){
+  const areas=getAreas();
+  const list=document.getElementById('areas-list');
+  if(!list)return;
+  if(!areas.length){
+    list.innerHTML='<div style="padding:14px;color:var(--text3);font-size:13px;">Sin áreas configuradas. Pulsa + Añadir área.</div>';
+    return;
+  }
+  list.innerHTML=areas.map((a,i)=>`
+    <div class="user-row">
+      <div class="user-avatar">🏭</div>
+      <div class="user-info">
+        <div class="un">${a.nombre}</div>
+        ${a.desc?`<div class="ur">${a.desc}</div>`:''}
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditAreaSheet(${i})">✏️</button>
+        <button class="btn btn-sm" style="background:rgba(232,34,34,.15);color:var(--bad);border:1px solid rgba(232,34,34,.3);" onclick="deleteArea(${i})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function populateAreaSelects(){
+  const areas=getAreas();
+  const selects=['aud-area','fil-area','ch-area','cmp-area','rc-area','pa-area'];
+  selects.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    const prev=el.value;
+    const isFilter=el.id!=='aud-area';
+    el.innerHTML=(isFilter?'<option value="">Todas las áreas</option>':'<option value="">— Seleccionar área —</option>')+
+      areas.map(a=>`<option value="${a.nombre}">${a.nombre}</option>`).join('');
+    if(prev)el.value=prev;
+  });
+}
+
+function openAddAreaSheet(){
+  document.getElementById('area-sheet-title').textContent='🏭 Nueva área';
+  document.getElementById('area-nombre').value='';
+  document.getElementById('area-desc').value='';
+  document.getElementById('area-edit-idx').value='';
+  document.getElementById('area-save-btn').textContent='Guardar área';
+  openSheet('area-sheet');
+}
+
+function openEditAreaSheet(idx){
+  const areas=getAreas();
+  const a=areas[idx];
+  document.getElementById('area-sheet-title').textContent='✏️ Editar área';
+  document.getElementById('area-nombre').value=a.nombre||'';
+  document.getElementById('area-desc').value=a.desc||'';
+  document.getElementById('area-edit-idx').value=idx;
+  document.getElementById('area-save-btn').textContent='Guardar cambios';
+  openSheet('area-sheet');
+}
+
+function saveArea(){
+  const nombre=document.getElementById('area-nombre').value.trim();
+  const desc=document.getElementById('area-desc').value.trim();
+  const idx=document.getElementById('area-edit-idx').value;
+  if(!nombre){toast('El nombre del área es obligatorio','⚠️');return;}
+  const areas=getAreas();
+  if(idx===''){
+    // Nueva
+    if(areas.find(a=>a.nombre===nombre)){toast('Ya existe un área con ese nombre','⚠️');return;}
+    areas.push({nombre,desc});
+    toast('Área añadida ✓','✅');
+  } else {
+    // Editar
+    areas[parseInt(idx)]={nombre,desc};
+    toast('Área actualizada ✓','✅');
+  }
+  saveAreas(areas);
+  closeSheet('area-sheet');
+  renderAreasList();
+  populateAreaSelects();
+}
+
+function deleteArea(idx){
+  const areas=getAreas();
+  if(!confirm('¿Eliminar el área "'+areas[idx].nombre+'"?'))return;
+  areas.splice(idx,1);
+  saveAreas(areas);
+  renderAreasList();
+  populateAreaSelects();
+  toast('Área eliminada','🗑️');
+}
+
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
@@ -2356,7 +2491,7 @@ async function appInit(){
     if(AUTH.isAdmin){const b=document.getElementById('users-admin-badge');if(b)b.style.display='';}
     setSyncStatus('syncing');
     const ok=await loadFromDrive();
-    if(ok){loadConfig();updateBadge();renderHome();}
+    if(ok){loadConfig();populateAreaSelects();updateBadge();renderHome();}
     else{
       // Token expirado o sin conexión
       AUTH.clear();
