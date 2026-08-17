@@ -64,6 +64,7 @@ function doPost(e) {
       case 'saveEstado':     return respond(saveEstado(body, user));
       case 'saveSeguimiento':return respond(saveSeguimiento(body, user));
       case 'saveConfig':     return respond(saveConfig(body, user));
+      case 'backup':         return respond(handleBackup(user));
 
       default: return respond({ ok: false, error: 'Acción desconocida: ' + action }, 400);
     }
@@ -448,6 +449,24 @@ function initSheets() {
         .setFontColor('#000000');
     }
   });
+}
+
+// ============================================================
+// BACKUP MANUAL DESDE LA APP
+// ============================================================
+function handleBackup(user) {
+  requireAdmin(user);
+  const ss     = SpreadsheetApp.openById(SHEET_ID);
+  const fecha  = Utilities.formatDate(new Date(), 'Europe/Madrid', 'yyyy-MM-dd_HH-mm');
+  const nombre = '5S-Audit-Backup-' + fecha;
+
+  const iterCarpeta = DriveApp.getFoldersByName('5S Audit — Backups');
+  const carpeta = iterCarpeta.hasNext() ? iterCarpeta.next() : DriveApp.createFolder('5S Audit — Backups');
+
+  const copia = ss.copy(nombre);
+  DriveApp.getFileById(copia.getId()).moveTo(carpeta);
+
+  return { ok: true, nombre: nombre };
 }
 
 function respond(data, code) {

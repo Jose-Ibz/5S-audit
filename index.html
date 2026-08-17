@@ -453,6 +453,7 @@ svg.radar{width:100%;height:180px;}
       <div class="card" style="margin-bottom:10px;"><div class="card-hdr" style="cursor:pointer;" onclick="go('config')"><span style="font-size:22px;">⚙</span><div style="flex:1"><div style="font-weight:600;">Configuración</div><div style="font-size:12px;color:var(--text3);">Empresa, objetivos y datos</div></div><span style="color:var(--text3);font-size:20px;">›</span></div></div>
       <div class="card" style="margin-bottom:10px;"><div class="card-hdr" style="cursor:pointer;" onclick="go('users')"><span style="font-size:22px;">👥</span><div style="flex:1"><div style="font-weight:600;">Usuarios</div><div style="font-size:12px;color:var(--text3);">Gestionar accesos a la app</div></div><span id="users-admin-badge" style="display:none;font-size:10px;background:rgba(240,192,64,.2);color:var(--accent);padding:2px 7px;border-radius:6px;font-weight:700;">ADMIN</span><span style="color:var(--text3);font-size:20px;margin-left:4px;">›</span></div></div>
 
+      <div class="card" style="margin-bottom:10px;"><div class="card-hdr" style="cursor:pointer;" onclick="doBackup()"><span style="font-size:22px;">💾</span><div style="flex:1"><div style="font-weight:600;">Copia de seguridad</div><div style="font-size:12px;color:var(--text3);">Guardar backup ahora en Google Drive</div></div></div></div>
       <div class="card" style="margin-bottom:10px;border-color:rgba(232,34,34,.3);"><div class="card-hdr" style="cursor:pointer;" onclick="doLogout()"><span style="font-size:22px;">🚪</span><div style="flex:1"><div style="font-weight:600;color:var(--bad);">Cerrar sesión</div><div style="font-size:12px;color:var(--text3);">Desconectarte de la app</div></div></div></div>
     </div>
 
@@ -1051,6 +1052,14 @@ async function doSetup() {
   document.getElementById('l-user').value = username;
   document.getElementById('l-pass').value = password;
   await doLogin();
+}
+
+async function doBackup() {
+  if (!confirm('¿Crear copia de seguridad ahora en Google Drive?')) return;
+  toast('Creando backup...', '💾');
+  const res = await api('backup');
+  if (res.ok) toast('Backup creado: ' + res.nombre, '✅');
+  else toast('Error en el backup: ' + (res.error || 'desconocido'), '❌');
 }
 
 async function doLogout() {
