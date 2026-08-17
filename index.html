@@ -452,7 +452,7 @@ svg.radar{width:100%;height:180px;}
       <div class="card" style="margin-bottom:10px;"><div class="card-hdr" style="cursor:pointer;" onclick="go('reports')"><span style="font-size:22px;">📄</span><div style="flex:1"><div style="font-weight:600;">Reportes</div><div style="font-size:12px;color:var(--text3);">Genera reportes PDF</div></div><span style="color:var(--text3);font-size:20px;">›</span></div></div>
       <div class="card" style="margin-bottom:10px;"><div class="card-hdr" style="cursor:pointer;" onclick="go('config')"><span style="font-size:22px;">⚙</span><div style="flex:1"><div style="font-weight:600;">Configuración</div><div style="font-size:12px;color:var(--text3);">Empresa, objetivos y datos</div></div><span style="color:var(--text3);font-size:20px;">›</span></div></div>
       <div class="card" style="margin-bottom:10px;"><div class="card-hdr" style="cursor:pointer;" onclick="go('users')"><span style="font-size:22px;">👥</span><div style="flex:1"><div style="font-weight:600;">Usuarios</div><div style="font-size:12px;color:var(--text3);">Gestionar accesos a la app</div></div><span id="users-admin-badge" style="display:none;font-size:10px;background:rgba(240,192,64,.2);color:var(--accent);padding:2px 7px;border-radius:6px;font-weight:700;">ADMIN</span><span style="color:var(--text3);font-size:20px;margin-left:4px;">›</span></div></div>
-      <div class="card" style="margin-bottom:10px;"><div class="card-hdr" style="cursor:pointer;" onclick="loadDemo()"><span style="font-size:22px;">🎯</span><div style="flex:1"><div style="font-weight:600;">Cargar datos demo</div><div style="font-size:12px;color:var(--text3);">Ver la app con datos de ejemplo</div></div></div></div>
+
       <div class="card" style="margin-bottom:10px;border-color:rgba(232,34,34,.3);"><div class="card-hdr" style="cursor:pointer;" onclick="doLogout()"><span style="font-size:22px;">🚪</span><div style="flex:1"><div style="font-weight:600;color:var(--bad);">Cerrar sesión</div><div style="font-size:12px;color:var(--text3);">Desconectarte de la app</div></div></div></div>
     </div>
 
@@ -993,19 +993,11 @@ function hideLogin() {
 }
 
 async function checkServerOnline() {
-  const setLoginStatus = (cls, txt) => {
-    const el  = document.getElementById('login-sync-status');
-    const tel = document.getElementById('login-sync-txt');
-    if(el)  el.className  = 'sync-bar ' + cls;
-    if(tel) tel.textContent = txt;
-  };
-  setLoginStatus('syncing', 'Comprobando conexión...');
+  setSyncStatus('syncing','Verificando servidor...');
   const res = await api('ping');
   if (res && res.ok) {
-    setLoginStatus('online', '🟢 Servidor activo');
     setSyncStatus('online','Servidor activo');
   } else {
-    setLoginStatus('offline', '🔴 Sin conexión al servidor');
     setSyncStatus('offline','Sin conexión al servidor');
   }
 }
@@ -1388,6 +1380,7 @@ async function finishAudit(){
     if(!estados[rc.id]) {estados[rc.id]={estado:'activa'};api('saveEstado',{rcId:rc.id,estado:'activa'});}
   });
   DB.estados=estados;
+  const audits=DB.audits;audits.unshift(audit);DB.audits=audits;
   // Guardar siempre en memoria local primero
   const audits=DB.audits;audits.unshift(audit);DB.audits=audits;
   setSyncStatus('syncing');
@@ -2421,37 +2414,6 @@ function clearAll(){
   updateBadge();renderHome();toast('Borrado','🗑️');
 }
 
-// ══════════════════════════════════════════
-// DEMO DATA
-// ══════════════════════════════════════════
-function loadDemo(){
-  const rc1id='RC-DEMO001',rc2id='RC-DEMO002',rc3id='RC-DEMO003';
-  const demo=[
-    {codigo:'AUD-DEMO1',area:'Línea A — Montaje',auditor:'Carlos García',fecha:'2025-01-15',turno:'Mañana',planta:'Planta Sur',finalScores:{seiri:85,seiton:70,seiso:90,seiketsu:65,shitsuke:75},global:77,notes:{seiri:'Se detectaron 3 cajas sin etiquetar.',seiton:'',seiso:'',seiketsu:'',shitsuke:''},redCards:{seiri_1_2:true},redCardDetails:{seiri_1_2:{id:rc1id,sKey:'seiri',cId:'1.2',sName:'SEIRI',sNum:'1S',sc:'s1',criterio:'No existen elementos obsoletos, defectuosos o en exceso en el puesto',desc:'3 cajas de material obsoleto junto a la línea sin identificar',categoria:'Innecesario',prioridad:'Alta',responsable:'Juan Méndez',fechaLimite:'2025-02-15',fotos:[],area:'Línea A — Montaje',fecha:'2025-01-15',auditCodigo:'AUD-DEMO1'}},redCardCount:1,timestamp:Date.now()-14*86400000,scores:{}},
-    {codigo:'AUD-DEMO2',area:'Almacén Norte',auditor:'María López',fecha:'2025-02-10',turno:'Tarde',planta:'Planta Sur',finalScores:{seiri:60,seiton:55,seiso:70,seiketsu:50,shitsuke:65},global:60,notes:{seiri:'',seiton:'Pasillos parcialmente bloqueados por palés.',seiso:'',seiketsu:'',shitsuke:''},redCards:{seiton_2_5:true,seiketsu_4_3:true},redCardDetails:{seiton_2_5:{id:rc2id,sKey:'seiton',cId:'2.5',sName:'SEITON',sNum:'2S',sc:'s2',criterio:'Las áreas de tránsito y pasillos están despejados y marcados',desc:'Palés bloqueando el pasillo principal más de 2 horas',categoria:'Mal ubicado',prioridad:'Alta',responsable:'Pedro Ruiz',fechaLimite:'2025-02-20',fotos:[],area:'Almacén Norte',fecha:'2025-02-10',auditCodigo:'AUD-DEMO2'},seiketsu_4_3:{id:rc3id,sKey:'seiketsu',cId:'4.3',sName:'SEIKETSU',sNum:'4S',sc:'s4',criterio:'Se realizan auditorías internas periódicas con evidencia documentada',desc:'Sin registros de auditorías internas en los últimos 3 meses',categoria:'Sin estándar',prioridad:'Media',responsable:'Ana Gómez',fechaLimite:'2025-03-01',fotos:[],area:'Almacén Norte',fecha:'2025-02-10',auditCodigo:'AUD-DEMO2'}},redCardCount:2,timestamp:Date.now()-3*86400000,scores:{}},
-    {codigo:'AUD-DEMO3',area:'Línea A — Montaje',auditor:'Carlos García',fecha:'2025-03-01',turno:'Mañana',planta:'Planta Sur',finalScores:{seiri:90,seiton:82,seiso:95,seiketsu:76,shitsuke:86},global:86,notes:{seiri:'Excelente mejora respecto al mes anterior.',seiton:'',seiso:'',seiketsu:'',shitsuke:''},redCards:{},redCardDetails:{},redCardCount:0,timestamp:Date.now()-86400000,scores:{}},
-  ];
-  // Estados y seguimientos demo
-  const estados={};
-  estados[rc1id]={estado:'en-progreso'};
-  estados[rc2id]={estado:'verificacion'};
-  estados[rc3id]={estado:'activa'};
-  const seguimientos={};
-  seguimientos[rc1id]=[
-    {id:'SEG-001',estado:'activa',comentario:'Tarjeta creada durante auditoría.',foto:null,fecha:'15/01/2025, 09:30',auto:true},
-    {id:'SEG-002',estado:'en-progreso',comentario:'Se ha contactado con Juan Méndez. Procederá a retirar las cajas el próximo lunes.',foto:null,fecha:'17/01/2025, 14:22',auto:false},
-  ];
-  seguimientos[rc2id]=[
-    {id:'SEG-003',estado:'activa',comentario:'Tarjeta creada durante auditoría.',foto:null,fecha:'10/02/2025, 16:45',auto:true},
-    {id:'SEG-004',estado:'en-progreso',comentario:'Pedro ha señalizado las zonas de palés. Pendiente verificar que se mantiene.',foto:null,fecha:'12/02/2025, 10:00',auto:false},
-    {id:'SEG-005',estado:'verificacion',comentario:'Se ha comprobado que los pasillos están despejados. Pendiente auditoría de verificación.',foto:null,fecha:'14/02/2025, 11:30',auto:false},
-  ];
-  seguimientos[rc3id]=[
-    {id:'SEG-006',estado:'activa',comentario:'Tarjeta creada durante auditoría.',foto:null,fecha:'10/02/2025, 16:50',auto:true},
-  ];
-  DB.audits=demo;DB.estados=estados;DB.seguimientos=seguimientos;
-  updateBadge();go('home');toast('Demo cargado ✓','🎯');
-}
 
 
 // ══════════════════════════════════════════
@@ -2589,7 +2551,10 @@ async function appInit(){
   } else {
     document.getElementById('login-screen').style.display='flex';
     document.getElementById('app').style.display='none';
-    checkServerOnline(); // esto ya hace el ping internamente
+    checkServerOnline();
+    // Check if first time (no users yet)
+    const res=await api('ping');
+    if(res&&res.ok){setSyncStatus('online','Servidor activo');}
   }
   // Keyboard enter en login
   ['l-user','l-pass'].forEach(id=>{
