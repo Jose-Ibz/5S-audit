@@ -943,13 +943,14 @@ function setSyncStatus(state, txt) {
   const labels = { online:'Drive ✓', offline:'Sin conexión', syncing:'Sincronizando...' };
   const el  = document.getElementById('sync-indicator');
   const tel = document.getElementById('sync-txt');
-  if (!el) return;
-  el.className = 'sync-bar ' + state;
-  if (tel) tel.textContent = txt || labels[state] || state;
-  // Login screen status
+  if (el) {
+    el.className = 'sync-bar ' + state;
+    if (tel) tel.textContent = txt || labels[state] || state;
+  }
+  // Login screen status — siempre se actualiza independientemente de sync-indicator
   const lel = document.getElementById('login-sync-status');
   const ltxt = document.getElementById('login-sync-txt');
-  if (lel) { lel.className = 'sync-bar ' + state; if (ltxt) ltxt.textContent = txt || labels[state]; }
+  if (lel) { lel.className = 'sync-bar ' + state; if (ltxt) ltxt.textContent = txt || labels[state] || state; }
 }
 
 // ══════════════════════════════════════════
@@ -1002,9 +1003,9 @@ async function checkServerOnline() {
   setSyncStatus('syncing','Verificando servidor...');
   const res = await api('ping');
   if (res && res.ok) {
-    setSyncStatus('online','Servidor activo');
+    setSyncStatus('online','Servidor activo ✓');
   } else {
-    setSyncStatus('offline','Sin conexión al servidor');
+    setSyncStatus('offline','Sin conexión — puedes intentar entrar igualmente');
   }
 }
 

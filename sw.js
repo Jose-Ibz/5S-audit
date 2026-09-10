@@ -3,7 +3,7 @@
 // Caché offline para funcionamiento sin internet
 // ============================================================
 
-const CACHE_NAME  = '5s-audit-v2';
+const CACHE_NAME  = '5s-audit-v3';
 const ASSETS      = [
   './',
   './index.html',
