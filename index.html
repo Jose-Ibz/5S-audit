@@ -1395,7 +1395,6 @@ async function finishAudit(){
     if(!estados[rc.id]) {estados[rc.id]={estado:'activa'};api('saveEstado',{rcId:rc.id,estado:'activa'});}
   });
   DB.estados=estados;
-  const audits=DB.audits;audits.unshift(audit);DB.audits=audits;
   // Guardar siempre en memoria local primero
   const audits=DB.audits;audits.unshift(audit);DB.audits=audits;
   setSyncStatus('syncing');
