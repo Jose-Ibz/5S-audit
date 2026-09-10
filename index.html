@@ -887,11 +887,15 @@ async function flushQueue(){
 // ══════════════════════════════════════════
 async function api(action, extra={}, skipQueue=false) {
   const body = { action, token: AUTH.token, ...extra };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000); // 15s timeout
   try {
     const res  = await fetch(SCRIPT_URL, {
       method: 'POST',
-      body:   JSON.stringify(body)
+      body:   JSON.stringify(body),
+      signal: ctrl.signal
     });
+    clearTimeout(timer);
     const data = await res.json();
     if (!data.ok && data.error === 'Sesión caducada. Inicia sesión de nuevo.') {
       AUTH.clear();
@@ -901,6 +905,7 @@ async function api(action, extra={}, skipQueue=false) {
     }
     return data;
   } catch(e) {
+    clearTimeout(timer);
     // Sin conexión — encolar si procede
     if(!skipQueue && ['saveAudit','saveEstado','saveSeguimiento','saveConfig'].includes(action)){
       addToQueue(action, extra);
@@ -2561,9 +2566,6 @@ async function appInit(){
     document.getElementById('login-screen').style.display='flex';
     document.getElementById('app').style.display='none';
     checkServerOnline();
-    // Check if first time (no users yet)
-    const res=await api('ping');
-    if(res&&res.ok){setSyncStatus('online','Servidor activo');}
   }
   // Keyboard enter en login
   ['l-user','l-pass'].forEach(id=>{
