@@ -3,7 +3,7 @@
 // Caché offline para funcionamiento sin internet
 // ============================================================
 
-const CACHE_NAME  = '5s-audit-v3';
+const CACHE_NAME  = '5s-audit-v4';
 const ASSETS      = [
   './',
   './index.html',
@@ -67,19 +67,33 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // index.html: red primero, caché como fallback (garantiza versión actualizada)
+  if(url.endsWith('/') || url.includes('index.html') || url.endsWith('5S-audit/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(res => {
+          if(res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   // Para todo lo demás: caché primero, red como fallback
   event.respondWith(
     caches.match(event.request).then(cached => {
       if(cached) return cached;
       return fetch(event.request).then(res => {
-        // Guardar en caché para la próxima vez
         if(res && res.status === 200) {
           const clone = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return res;
       }).catch(() => {
-        // Sin red ni caché
         return caches.match('./index.html');
       });
     })
