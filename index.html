@@ -696,8 +696,8 @@ svg.radar{width:100%;height:180px;}
     <div class="fg"><label>Contraseña</label><input class="fi" type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"></div>
     <button class="btn btn-primary btn-block" id="l-btn" onclick="doLogin()" style="margin-top:8px;">Entrar</button>
     <div style="margin-top:16px;text-align:center;">
-      <div id="login-sync-status" class="sync-bar offline" style="justify-content:center;">
-        <div class="sync-dot"></div><span id="login-sync-txt">Comprobando conexión...</span>
+      <div id="login-sync-status" class="sync-bar online" style="justify-content:center;">
+        <div class="sync-dot"></div><span id="login-sync-txt">Listo para entrar</span>
       </div>
     </div>
   </div>
@@ -888,7 +888,7 @@ async function flushQueue(){
 async function api(action, extra={}, skipQueue=false) {
   const body = { action, token: AUTH.token, ...extra };
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 15000); // 15s timeout
+  const timer = setTimeout(() => ctrl.abort(), 8000); // 8s timeout
   try {
     const res  = await fetch(SCRIPT_URL, {
       method: 'POST',
@@ -2561,12 +2561,12 @@ async function appInit(){
       AUTH.clear();
       document.getElementById('login-screen').style.display='flex';
       document.getElementById('app').style.display='none';
-      checkServerOnline();
+      // ping eliminado: el login ya comprueba la conexión
     }
   } else {
     document.getElementById('login-screen').style.display='flex';
     document.getElementById('app').style.display='none';
-    checkServerOnline();
+    // ping eliminado: el login ya comprueba la conexión
   }
   // Keyboard enter en login
   ['l-user','l-pass'].forEach(id=>{
